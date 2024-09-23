@@ -38,39 +38,59 @@ public class OracleDBHandler extends DBHandler {
         }
     }
 
-    public void update(String updateQuery) {
-        try (Connection conn = connect()) {
-            Statement stmt = conn.createStatement();
-            int rowsAffected = stmt.executeUpdate(updateQuery);
+    public void insert(String tableName, List<Object> values) {
+        String checkTableQuery = "SELECT COUNT(*) FROM user_tables WHERE table_name = UPPER(?)";
 
-            System.out.println("Updated. Rows Affected: " + rowsAffected);
-        } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
+        try (Connection conn = connect();
+             PreparedStatement checkStmt = conn.prepareStatement(checkTableQuery)) {
+            // checking if table exists
+            checkStmt.setString(1, tableName);
+            ResultSet tableExistsResult = checkStmt.executeQuery();
+            if (tableExistsResult.next() && tableExistsResult.getInt(1) == 0) {
+                System.out.println("Table " + tableName + " does not exist.");
+                return;
+            }
+
+            // getting the schema info
+            String getColumnsQuery = "SELECT column_name FROM user_tab_columns WHERE table_name = UPPER(?) ORDER BY column_id";
+            try (PreparedStatement columnsStmt = conn.prepareStatement(getColumnsQuery)) {
+                columnsStmt.setString(1, tableName);
+                ResultSet columnsResult = columnsStmt.executeQuery();
+
+                StringBuilder columns = new StringBuilder();
+                StringBuilder placeholders = new StringBuilder();
+                int columnCount = 0;
+
+                while (columnsResult.next()) {
+                    if (columnCount > 0) {
+                        columns.append(", ");
+                        placeholders.append(", ");
+                    }
+                    columns.append(columnsResult.getString("COLUMN_NAME"));
+                    placeholders.append("?");
+                    columnCount++;
+                }
+
+                // verifying schema and list allign
+                if (columnCount != values.size()) {
+                    System.out.println("Number of values does not match the number of columns.");
+                    return;
+                }
+
+                // inserting
+                String insertQuery = "INSERT INTO " + tableName + " (" + columns + ") VALUES (" + placeholders + ")";
+                try (PreparedStatement insertStmt = conn.prepareStatement(insertQuery)) {
+                    for (int i = 0; i < values.size(); i++) {
+                        insertStmt.setObject(i + 1, values.get(i));
+                    }
+                    insertStmt.executeUpdate();
+                    System.out.println("Values inserted successfully into " + tableName);
+                }
+            }
+
+        } catch (SQLException e) {
             e.printStackTrace();
-        }
-    }
-
-    public void remove(String deleteQuery) {
-        try (Connection conn = connect()) {
-            Statement stmt = conn.createStatement();
-            int rowsAffected = stmt.executeUpdate(deleteQuery);
-
-            System.out.println("Deleted. Rows Affected: " + rowsAffected);
-        } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    public void add(String insertQuery) {
-        try (Connection conn = connect()) {
-            Statement stmt = conn.createStatement();
-            int rowsAffected = stmt.executeUpdate(insertQuery);
-
-            System.out.println("Added. Rows Affected: " + rowsAffected);
-        } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
-            e.printStackTrace();
+            System.out.println("Error inserting.");
         }
     }
 }
