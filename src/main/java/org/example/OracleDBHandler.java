@@ -36,5 +36,41 @@ public class OracleDBHandler extends DBHandler {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        public void update(String updateQuery) {
+            try (Connection conn = connect()) {
+                Statement stmt = conn.createStatement();
+                int rowsAffected = stmt.executeUpdate(updateQuery);
+    
+                System.out.println("Updated. Rows Affected: " + rowsAffected);
+            } catch (Exception e) {
+                System.err.println("Error: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    
+        public void remove(String deleteQuery) {
+            try (Connection conn = connect()) {
+                Statement stmt = conn.createStatement();
+                int rowsAffected = stmt.executeUpdate(deleteQuery);
+    
+                System.out.println("Deleted. Rows Affected: " + rowsAffected);
+            } catch (Exception e) {
+                System.err.println("Error: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    
+        public void add(String insertQuery) {
+            try (Connection conn = connect()) {
+                Statement stmt = conn.createStatement();
+                int rowsAffected = stmt.executeUpdate(insertQuery);
+    
+                System.out.println("Added. Rows Affected: " + rowsAffected);
+            } catch (Exception e) {
+                System.err.println("Error: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
     }
 }
