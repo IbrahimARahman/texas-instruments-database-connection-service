@@ -1,9 +1,7 @@
 package org.example;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.Statement;
+import java.sql.*;
+import java.util.List;
 
 public class OracleDBHandler extends DBHandler {
     public OracleDBHandler(String url, String user, String password) {
@@ -87,10 +85,8 @@ public class OracleDBHandler extends DBHandler {
                     System.out.println("Values inserted successfully into " + tableName);
                 }
             }
-
         } catch (SQLException e) {
-            e.printStackTrace();
-            System.out.println("Error inserting.");
+            System.out.println("Error inserting. Please make sure the datatypes and number of columns are correct.");
         }
     }
 }

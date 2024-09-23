@@ -1,6 +1,7 @@
 package org.example;
 
 import java.sql.*;
+import java.util.List;
 
 
 public abstract class DBHandler {
@@ -20,7 +21,6 @@ public abstract class DBHandler {
 
     public ResultSet execQuery(String query) {
         try (Connection conn = connect()) {
-
             Statement stmt = conn.createStatement();
             return stmt.executeQuery(query);
         } catch(Exception e) {
@@ -30,4 +30,5 @@ public abstract class DBHandler {
     }
 
     abstract public void listTables();
+    abstract public void insert(String tableName, List<Object> values);
 }
