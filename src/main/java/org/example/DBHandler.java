@@ -3,7 +3,6 @@ package org.example;
 import java.sql.*;
 import java.util.List;
 
-
 public abstract class DBHandler {
     private final String url;
     private final String username;
@@ -23,12 +22,15 @@ public abstract class DBHandler {
         try (Connection conn = connect()) {
             Statement stmt = conn.createStatement();
             return stmt.executeQuery(query);
-        } catch(Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
 
     abstract public void listTables();
+
     abstract public void insert(String tableName, List<Object> values);
+
+    abstract public void delete(String tableName, List<String> columns, List<Object> values);
 }
