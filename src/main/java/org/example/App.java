@@ -27,8 +27,8 @@ public class App {
                         ")");*/
             DB.listTables();
             //DB.insert("PEOPLE", List.of(1, "Smith", "John", "123 Maple St", "New York"));
-            DB.insert("PEOPLE", List.of("hello", 2, "John", "123 Maple St", "New York"));
-            DB.insert("PEOPLE", List.of(1, "John", "123 Maple St", "New York"));
+            //DB.insert("PEOPLE", List.of("hello", 2, "John", "123 Maple St", "New York"));
+            //DB.insert("PEOPLE", List.of(1, "John", "123 Maple St", "New York"));
         }
         catch( Exception e ) {
             e.printStackTrace();
