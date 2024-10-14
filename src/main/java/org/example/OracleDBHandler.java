@@ -94,7 +94,6 @@ public class OracleDBHandler extends DBHandler {
         }
     }
 
-
     public void insert(String tableName, List<Object> values) {
         String checkTableQuery = "SELECT COUNT(*) FROM user_tables WHERE table_name = UPPER(?)";
 
@@ -237,6 +236,53 @@ public class OracleDBHandler extends DBHandler {
                     System.out.println(rowsDeleted + " rows deleted from " + tableName);
                 }
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // New Select method implementation
+    @Override
+    public void select(String tableName, List<String> columns, String whereClause, List<Object> params) {
+        try {
+            Connection conn = connect();
+            StringBuilder query = new StringBuilder("SELECT ");
+
+            if (columns == null || columns.isEmpty()) {
+                query.append("*");
+            } else {
+                query.append(String.join(", ", columns));
+            }
+
+            query.append(" FROM ").append(tableName);
+
+            if (whereClause != null && !whereClause.isEmpty()) {
+                query.append(" WHERE ").append(whereClause);
+            }
+
+            PreparedStatement stmt = conn.prepareStatement(query.toString());
+
+            if (params != null) {
+                for (int i = 0; i < params.size(); i++) {
+                    stmt.setObject(i + 1, params.get(i));
+                }
+            }
+
+            ResultSet rs = stmt.executeQuery();
+
+            // Print results directly inside the function
+            while (rs.next()) {
+                StringBuilder result = new StringBuilder();
+                for (String column : columns) {
+                    result.append(column).append(": ").append(rs.getObject(column)).append(", ");
+                }
+                // Remove the trailing comma and space
+                if (result.length() > 0) {
+                    result.setLength(result.length() - 2);
+                }
+                System.out.println(result.toString());
+            }
+            System.out.println();
         } catch (SQLException e) {
             e.printStackTrace();
         }

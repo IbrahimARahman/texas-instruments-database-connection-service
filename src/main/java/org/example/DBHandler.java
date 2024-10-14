@@ -28,12 +28,18 @@ public abstract class DBHandler {
         }
     }
 
-    abstract public void listTables();
+    public abstract void listTables();
+
     abstract String toJavaLikeType(String dataType, int dataLength);
+
     abstract String generateExampleValue(String dataType, int dataLength);
 
-    abstract public void insert(String tableName, List<Object> values);
+    public abstract void insert(String tableName, List<Object> values);
+
     abstract boolean isValueCompatibleWithType(Object value, String expectedDataType);
 
-    abstract public void delete(String tableName, List<String> columns, List<Object> values);
+    public abstract void delete(String tableName, List<String> columns, List<Object> values);
+
+    // New abstract select method
+    public abstract void select(String tableName, List<String> columns, String whereClause, List<Object> params);
 }
