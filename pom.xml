@@ -23,12 +23,6 @@
     </dependency>
 
     <dependency>
-      <groupId>io.github.cdimascio</groupId>
-      <artifactId>dotenv-java</artifactId>
-      <version>3.0.0</version>
-    </dependency>
-
-    <dependency>
       <groupId>com.oracle</groupId>
       <artifactId>ojdbc11</artifactId>
       <version>19.3</version>

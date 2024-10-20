@@ -8,8 +8,10 @@ import java.util.List;
 
 public class App {
     public static void main(String[] args) {
-        Dotenv dotenv = Dotenv.load();
-        DBHandler DB = new OracleDBHandler(dotenv.get("DB_URL"), dotenv.get("DB_USER"), dotenv.get("DB_PASSWORD"));
+        String url = "jdbc:oracle:thin:@//localhost:1521/ORCLPDB1";
+        String user = "DBAPI";
+        String password = "dbapipass";
+        DBHandler DB = new OracleDBHandler(url, user, password);
         try {
             Class.forName("oracle.jdbc.driver.OracleDriver");
             /*DB.execQuery("CREATE TABLE People (\n" +
