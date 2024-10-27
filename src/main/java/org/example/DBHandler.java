@@ -1,5 +1,7 @@
 package org.example;
 
+import org.springframework.stereotype.Component;
+
 import java.sql.*;
 import java.util.List;
 
@@ -18,17 +20,37 @@ public abstract class DBHandler {
         return DriverManager.getConnection(url, username, password);
     }
 
-    public ResultSet execQuery(String query) {
+    public String execQuery(String query) {
         try (Connection conn = connect()) {
             Statement stmt = conn.createStatement();
-            return stmt.executeQuery(query);
+            ResultSet rs = stmt.executeQuery(query);
+            StringBuilder result = new StringBuilder();
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+            while (rs.next()) {
+                for (int i = 1; i <= columnCount; i++) {
+                    String columnName = metaData.getColumnName(i);
+                    Object columnValue = rs.getObject(i);
+                    result.append(columnName).append(": ").append(columnValue).append(", ");
+                }
+                // Remove the trailing comma and space
+                if (result.length() > 0) {
+                    result.setLength(result.length() - 2);
+                }
+                result.append("\n"); // Add a newline after each row
+            }
+            System.out.println(result.toString());
+            return result.toString();
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            return e.toString();
         }
     }
 
-    public abstract void listTables();
+    /*public int createTable(String sqlStr) {
+
+    }*/
+
+    public abstract String listTables();
 
     abstract String toJavaLikeType(String dataType, int dataLength);
 

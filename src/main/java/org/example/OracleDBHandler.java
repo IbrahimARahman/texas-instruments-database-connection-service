@@ -1,5 +1,7 @@
 package org.example;
 
+import org.springframework.stereotype.Component;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,15 +13,16 @@ public class OracleDBHandler extends DBHandler {
         super(url, user, password);
     }
 
-    public void listTables() {
+    public String listTables() {
+        StringBuilder output = new StringBuilder();
         String query = "SELECT table_name, column_name, data_type, data_length " +
                 "FROM user_tab_columns " +
                 "ORDER BY table_name, column_id";
+
         try (Connection conn = connect()) {
             Statement stmt = conn.createStatement();
             ResultSet rs = stmt.executeQuery(query);
             String currentTable = "";
-            StringBuilder insertStatement = new StringBuilder();
             StringBuilder exampleValues = new StringBuilder();
 
             while (rs.next()) {
@@ -31,14 +34,16 @@ public class OracleDBHandler extends DBHandler {
                 // Print table name only once when it changes
                 if (!tableName.equals(currentTable)) {
                     if (!currentTable.isEmpty()) {
-                        // Print example insert statement for the previous table
-                        System.out.println("Example Insert: insert(\"" + currentTable + "\", " + exampleValues.append("));").toString());
+                        // Add example insert statement for the previous table
+                        output.append("Example Insert: insert(\"")
+                                .append(currentTable)
+                                .append("\", ")
+                                .append(exampleValues.append("));\n"));
                     }
                     currentTable = tableName;
-                    insertStatement.setLength(0); // Reset for the new table
-                    exampleValues.setLength(0);
+                    exampleValues.setLength(0); // Reset for the new table
                     exampleValues.append("List.of(");
-                    System.out.println("\nTable: " + tableName);
+                    output.append("\nTable: ").append(tableName).append("\n");
                 }
 
                 // Append values for the example insert
@@ -47,18 +52,25 @@ public class OracleDBHandler extends DBHandler {
                 }
                 exampleValues.append(generateExampleValue(dataType, dataLength));
 
-                // Print column details with Java/C++-like types
-                System.out.println(columnName + " (" + toJavaLikeType(dataType, dataLength) + ")");
+                // Append column details with Java/C++-like types
+                output.append(columnName)
+                        .append(" (")
+                        .append(toJavaLikeType(dataType, dataLength))
+                        .append(")\n");
             }
 
-            // Print example insert statement for the last table
+            // Add example insert statement for the last table
             if (!currentTable.isEmpty()) {
-                System.out.println("Example Insert: insert(\"" + currentTable + "\", " + exampleValues.append("));").toString());
+                output.append("Example Insert: DB.insert(\"")
+                        .append(currentTable)
+                        .append("\", ")
+                        .append(exampleValues.append("));\n"));
             }
-            System.out.println();
         } catch (Exception e) {
             e.printStackTrace();
+            return "Error: " + e.getMessage();
         }
+        return output.toString();
     }
 
     // Helper to convert SQL data types to Java/C++-like data types
@@ -282,7 +294,6 @@ public class OracleDBHandler extends DBHandler {
                 }
                 System.out.println(result.toString());
             }
-            System.out.println();
         } catch (SQLException e) {
             e.printStackTrace();
         }

@@ -1,11 +1,11 @@
-package org.example.DatabaseAPI;
+package org.example;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class DatabaseAPI {
+public class ApiApp {
     public static void main(String[] args) {
-        SpringApplication.run(DatabaseAPI.class, args);
+        SpringApplication.run(ApiApp.class, args);
     }
 }
