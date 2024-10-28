@@ -27,6 +27,4 @@ public class DatabaseController {
         System.out.println(DB.listTables());
         return DB.listTables();
     }
-
-
 }
