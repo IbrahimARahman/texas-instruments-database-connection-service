@@ -61,6 +61,75 @@ public class ApiClient {
         }
     }
 
+        // Function to perform an INSERT operation
+    public String insert(String tableName, List<Object> values) {
+        String jsonData = "{\"tableName\": \"" + tableName + "\", \"values\": " + values.toString() + "}";
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + "/api/insert"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonData, StandardCharsets.UTF_8))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                return response.body();
+            } else {
+                System.err.println("HTTP POST request failed with response code: " + response.statusCode());
+                return "";
+            }
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
+    // Function to perform a DELETE operation
+    public String delete(String tableName, List<String> columns, List<Object> values) {
+        String jsonData = "{\"tableName\": \"" + tableName + "\", \"columns\": " + columns.toString() + ", \"values\": " + values.toString() + "}";
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + "/api/delete"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonData, StandardCharsets.UTF_8))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                return response.body();
+            } else {
+                System.err.println("HTTP POST request failed with response code: " + response.statusCode());
+                return "";
+            }
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
+    // Function to perform a SELECT operation
+    public String select(String tableName, List<String> columns, String whereClause, List<Object> params) {
+        String jsonData = "{\"tableName\": \"" + tableName + "\", \"columns\": " + columns.toString() + ", \"whereClause\": \"" + whereClause + "\", \"params\": " + params.toString() + "}";
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + "/api/select"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonData, StandardCharsets.UTF_8))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                return response.body();
+            } else {
+                System.err.println("HTTP POST request failed with response code: " + response.statusCode());
+                return "";
+            }
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
     public static void main(String[] args) {
         // Example usage of the ApiClient
         ApiClient apiClient = new ApiClient("http://localhost:8080");
