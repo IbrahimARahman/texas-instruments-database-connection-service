@@ -99,6 +99,72 @@ public:
     }
 };
 
+    // Function to perform an INSERT operation
+    std::string insert(const std::string& tableName, const std::string& values) {
+        if (!curl) {
+            std::cerr << "CURL is not initialized." << std::endl;
+            return "";
+        }
+        std::string jsonData = "{\"tableName\": \"" + tableName + "\", \"values\": " + values + "}";
+        std::string url = "http://localhost:8080/api/insert";
+        CURLcode res;
+
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonData.c_str());
+        responseBuffer.clear();
+
+        res = curl_easy_perform(curl);
+        if (res != CURLE_OK) {
+            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+            return "";
+        }
+        return responseBuffer;
+    }
+
+    // Function to perform a DELETE operation
+    std::string deleteData(const std::string& tableName, const std::string& columns, const std::string& values) {
+        if (!curl) {
+            std::cerr << "CURL is not initialized." << std::endl;
+            return "";
+        }
+        std::string jsonData = "{\"tableName\": \"" + tableName + "\", \"columns\": " + columns + ", \"values\": " + values + "}";
+        std::string url = "http://localhost:8080/api/delete";
+        CURLcode res;
+
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonData.c_str());
+        responseBuffer.clear();
+
+        res = curl_easy_perform(curl);
+        if (res != CURLE_OK) {
+            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+            return "";
+        }
+        return responseBuffer;
+    }
+
+    // Function to perform a SELECT operation
+    std::string select(const std::string& tableName, const std::string& columns, const std::string& whereClause, const std::string& params) {
+        if (!curl) {
+            std::cerr << "CURL is not initialized." << std::endl;
+            return "";
+        }
+        std::string jsonData = "{\"tableName\": \"" + tableName + "\", \"columns\": " + columns + ", \"whereClause\": \"" + whereClause + "\", \"params\": " + params + "}";
+        std::string url = "http://localhost:8080/api/select";
+        CURLcode res;
+
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonData.c_str());
+        responseBuffer.clear();
+
+        res = curl_easy_perform(curl);
+        if (res != CURLE_OK) {
+            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+            return "";
+        }
+        return responseBuffer;
+    }
+
 int main() {
     try {
         ApiClient apiClient;
