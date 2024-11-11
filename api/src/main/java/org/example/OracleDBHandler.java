@@ -13,15 +13,14 @@ public class OracleDBHandler extends DBHandler {
         super(url, user, password);
     }
 
-    public String listTables() {
+    public Result listTables() {
         StringBuilder output = new StringBuilder();
-        String query = "SELECT table_name, column_name, data_type, data_length " +
-                "FROM user_tab_columns " +
-                "ORDER BY table_name, column_id";
+        String query = "SELECT table_name, column_name, data_type, data_length FROM user_tab_columns ORDER BY table_name, column_id";
 
-        try (Connection conn = connect()) {
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(query);
+        try (Connection conn = connect();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+
             String currentTable = "";
             StringBuilder exampleValues = new StringBuilder();
 
@@ -31,47 +30,36 @@ public class OracleDBHandler extends DBHandler {
                 String dataType = rs.getString("DATA_TYPE");
                 int dataLength = rs.getInt("DATA_LENGTH");
 
-                // Print table name only once when it changes
                 if (!tableName.equals(currentTable)) {
                     if (!currentTable.isEmpty()) {
-                        // Add example insert statement for the previous table
-                        output.append("Example Insert: insert(\"")
-                                .append(currentTable)
-                                .append("\", ")
-                                .append(exampleValues.append("));\n"));
+                        output.append("Example Insert: insert(\"").append(currentTable)
+                                .append("\", ").append(exampleValues.append("));\n"));
                     }
                     currentTable = tableName;
-                    exampleValues.setLength(0); // Reset for the new table
+                    exampleValues.setLength(0);
                     exampleValues.append("List.of(");
                     output.append("\nTable: ").append(tableName).append("\n");
                 }
 
-                // Append values for the example insert
                 if (exampleValues.charAt(exampleValues.length() - 1) != '(') {
                     exampleValues.append(", ");
                 }
                 exampleValues.append(generateExampleValue(dataType, dataLength));
 
-                // Append column details with Java/C++-like types
-                output.append(columnName)
-                        .append(" (")
-                        .append(toJavaLikeType(dataType, dataLength))
-                        .append(")\n");
+                output.append(columnName).append(" (").append(toJavaLikeType(dataType, dataLength)).append(")\n");
             }
 
-            // Add example insert statement for the last table
             if (!currentTable.isEmpty()) {
-                output.append("Example Insert: DB.insert(\"")
-                        .append(currentTable)
-                        .append("\", ")
-                        .append(exampleValues.append("));\n"));
+                output.append("Example Insert: DB.insert(\"").append(currentTable)
+                        .append("\", ").append(exampleValues.append("));\n"));
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Error: " + e.getMessage();
+
+            return new Result("success", "Tables listed successfully", output.toString());
+        } catch (SQLException e) {
+            return new Result("error", "SQL Error: " + e.getMessage());
         }
-        return output.toString();
     }
+
 
     // Helper to convert SQL data types to Java/C++-like data types
     String toJavaLikeType(String dataType, int dataLength) {
@@ -106,7 +94,7 @@ public class OracleDBHandler extends DBHandler {
         }
     }
 
-    public void insert(String tableName, List<Object> values) {
+    public Result insert(String tableName, List<Object> values) {
         String checkTableQuery = "SELECT COUNT(*) FROM user_tables WHERE table_name = UPPER(?)";
 
         try (Connection conn = connect();
@@ -116,8 +104,7 @@ public class OracleDBHandler extends DBHandler {
             checkStmt.setString(1, tableName);
             ResultSet tableExistsResult = checkStmt.executeQuery();
             if (tableExistsResult.next() && tableExistsResult.getInt(1) == 0) {
-                System.out.println("Table " + tableName + " does not exist.");
-                return;
+                return new Result("error", "Table " + tableName + " does not exist.");
             }
 
             // Getting the schema info
@@ -144,8 +131,7 @@ public class OracleDBHandler extends DBHandler {
 
                 // Verifying schema and list alignment
                 if (columnCount != values.size()) {
-                    System.out.println("Error: Number of values (" + values.size() + ") does not match the number of columns (" + columnCount + ").");
-                    return;
+                    return new Result("error", "Number of values (" + values.size() + ") does not match the number of columns (" + columnCount + ").");
                 }
 
                 // Checking data types
@@ -153,8 +139,7 @@ public class OracleDBHandler extends DBHandler {
                     Object value = values.get(i);
                     String expectedDataType = dataTypes.get(i).toUpperCase();
                     if (!isValueCompatibleWithType(value, expectedDataType)) {
-                        System.out.println("Error: Value '" + value + "' at index " + (i + 1) + " does not match expected data type '" + expectedDataType + "'.");
-                        return;
+                        return new Result("error", "Value '" + value + "' at index " + (i + 1) + " does not match expected data type '" + expectedDataType + "'.");
                     }
                 }
 
@@ -164,14 +149,15 @@ public class OracleDBHandler extends DBHandler {
                     for (int i = 0; i < values.size(); i++) {
                         insertStmt.setObject(i + 1, values.get(i));
                     }
-                    insertStmt.executeUpdate();
-                    System.out.println("Values inserted successfully into " + tableName);
+                    int rowsInserted = insertStmt.executeUpdate();
+                    return new Result("success", "Values inserted successfully into " + tableName + ". Rows affected: " + rowsInserted);
                 }
             }
         } catch (SQLException e) {
-            System.out.println("SQL Error: " + e.getMessage());
+            return new Result("error", "SQL Error: " + e.getMessage());
         }
     }
+
 
     // Helper function to check if a value is compatible with the expected SQL data type
     boolean isValueCompatibleWithType(Object value, String expectedDataType) {
@@ -193,25 +179,25 @@ public class OracleDBHandler extends DBHandler {
         }
     }
 
-    public void delete(String tableName, List<String> columns, List<Object> values) {
+    public Result delete(String tableName, List<String> columns, List<Object> values) {
         String checkTableQuery = "SELECT COUNT(*) FROM user_tables WHERE table_name = UPPER(?)";
 
         try (Connection conn = connect();
              PreparedStatement checkStmt = conn.prepareStatement(checkTableQuery)) {
+
             // Check if the table exists
             checkStmt.setString(1, tableName);
             ResultSet tableExistsResult = checkStmt.executeQuery();
             if (tableExistsResult.next() && tableExistsResult.getInt(1) == 0) {
-                System.out.println("Table " + tableName + " does not exist.");
-                return;
+                return new Result("error", "Table " + tableName + " does not exist.");
             }
 
+            // Check that the number of columns matches the number of values
             if (columns.size() != values.size()) {
-                System.out.println("Number of columns does not match number of values.");
-                return;
+                return new Result("error", "Number of columns does not match the number of values.");
             }
 
-            // Get the schema information
+            // Get the schema information to verify columns exist
             String getColumnsQuery = "SELECT column_name FROM user_tab_columns WHERE table_name = UPPER(?)";
             try (PreparedStatement columnsStmt = conn.prepareStatement(getColumnsQuery)) {
                 columnsStmt.setString(1, tableName);
@@ -222,11 +208,10 @@ public class OracleDBHandler extends DBHandler {
                     validColumns.add(columnsResult.getString("COLUMN_NAME").toUpperCase());
                 }
 
-                // Verify that the columns exist in the table
+                // Verify that all provided columns exist in the table
                 for (String column : columns) {
                     if (!validColumns.contains(column.toUpperCase())) {
-                        System.out.println("Column " + column + " does not exist in table " + tableName);
-                        return;
+                        return new Result("error", "Column " + column + " does not exist in table " + tableName);
                     }
                 }
 
@@ -239,41 +224,41 @@ public class OracleDBHandler extends DBHandler {
                     whereClause.append(columns.get(i)).append(" = ?");
                 }
 
-                String deleteQuery = "DELETE FROM " + tableName + " WHERE " + whereClause.toString();
+                // Execute the delete query
+                String deleteQuery = "DELETE FROM " + tableName + " WHERE " + whereClause;
                 try (PreparedStatement deleteStmt = conn.prepareStatement(deleteQuery)) {
                     for (int i = 0; i < values.size(); i++) {
                         deleteStmt.setObject(i + 1, values.get(i));
                     }
                     int rowsDeleted = deleteStmt.executeUpdate();
-                    System.out.println(rowsDeleted + " rows deleted from " + tableName);
+                    return new Result("success", rowsDeleted + " rows deleted from " + tableName);
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            return new Result("error", "SQL Error: " + e.getMessage());
         }
     }
 
-    // New Select method implementation
-    @Override
-    public void select(String tableName, List<String> columns, String whereClause, List<Object> params) {
-        try {
-            Connection conn = connect();
-            StringBuilder query = new StringBuilder("SELECT ");
+    public Result select(String tableName, List<String> columns, String whereClause, List<Object> params) {
+        StringBuilder query = new StringBuilder("SELECT ");
 
-            if (columns == null || columns.isEmpty()) {
-                query.append("*");
-            } else {
-                query.append(String.join(", ", columns));
-            }
+        // Append column names or "*" if no columns are specified
+        if (columns == null || columns.isEmpty()) {
+            query.append("*");
+        } else {
+            query.append(String.join(", ", columns));
+        }
+        query.append(" FROM ").append(tableName);
 
-            query.append(" FROM ").append(tableName);
+        // Append WHERE clause if provided
+        if (whereClause != null && !whereClause.isEmpty()) {
+            query.append(" WHERE ").append(whereClause);
+        }
 
-            if (whereClause != null && !whereClause.isEmpty()) {
-                query.append(" WHERE ").append(whereClause);
-            }
+        try (Connection conn = connect();
+             PreparedStatement stmt = conn.prepareStatement(query.toString())) {
 
-            PreparedStatement stmt = conn.prepareStatement(query.toString());
-
+            // Set the parameters for the WHERE clause
             if (params != null) {
                 for (int i = 0; i < params.size(); i++) {
                     stmt.setObject(i + 1, params.get(i));
@@ -281,21 +266,31 @@ public class OracleDBHandler extends DBHandler {
             }
 
             ResultSet rs = stmt.executeQuery();
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+            StringBuilder resultData = new StringBuilder();
 
-            // Print results directly inside the function
+            // Format each row in the result set
             while (rs.next()) {
-                StringBuilder result = new StringBuilder();
-                for (String column : columns) {
-                    result.append(column).append(": ").append(rs.getObject(column)).append(", ");
+                for (int i = 1; i <= columnCount; i++) {
+                    String columnName = metaData.getColumnName(i);
+                    Object columnValue = rs.getObject(i);
+                    resultData.append(columnName).append(": ").append(columnValue).append(", ");
                 }
                 // Remove the trailing comma and space
-                if (result.length() > 0) {
-                    result.setLength(result.length() - 2);
+                if (resultData.length() > 0) {
+                    resultData.setLength(resultData.length() - 2);
                 }
-                System.out.println(result.toString());
+                resultData.append("\n"); // Add a newline after each row
             }
+
+            if (resultData.length() == 0) {
+                return new Result("success", "Query executed successfully, but no results were found.");
+            }
+
+            return new Result("success", "Query executed successfully", resultData.toString());
         } catch (SQLException e) {
-            e.printStackTrace();
+            return new Result("error", "SQL Error: " + e.getMessage());
         }
     }
 }

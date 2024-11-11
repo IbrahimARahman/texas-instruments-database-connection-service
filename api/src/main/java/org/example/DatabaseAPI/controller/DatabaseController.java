@@ -2,6 +2,7 @@ package org.example.DatabaseAPI.controller;
 
 import org.example.DBHandler;
 import org.example.OracleDBHandler;
+import org.example.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
@@ -22,19 +23,21 @@ public class DatabaseController {
 
     @PostMapping("/execQuery")
     public ResponseEntity<Map<String, Object>> execQuery(@RequestBody String query) {
-        String result = DB.execQuery(query);
+        Result result = DB.execQuery(query);
         Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("result", result);
+        response.put("status", result.getStatus());
+        response.put("message", result.getMessage());
+        if (result.getData() != null) response.put("data", result.getData());
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/listTables")
     public ResponseEntity<Map<String, Object>> listTables() {
-        String tables = DB.listTables();
+        Result result = DB.listTables();
         Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("tables", tables);
+        response.put("status", result.getStatus());
+        response.put("message", result.getMessage());
+        if (result.getData() != null) response.put("data", result.getData());
         return ResponseEntity.ok(response);
     }
 
@@ -44,17 +47,11 @@ public class DatabaseController {
         List<Object> values = (List<Object>) payload.get("values");
 
         if (tableName == null || values == null) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", "error");
-            errorResponse.put("message", "Invalid input");
-            return ResponseEntity.badRequest().body(errorResponse);
+            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "Invalid input"));
         }
 
-        DB.insert(tableName, values);
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", "Insert operation completed successfully");
-        return ResponseEntity.ok(response);
+        Result result = DB.insert(tableName, values);
+        return ResponseEntity.ok(Map.of("status", result.getStatus(), "message", result.getMessage()));
     }
 
     @PostMapping("/delete")
@@ -64,16 +61,13 @@ public class DatabaseController {
         List<Object> values = (List<Object>) payload.get("values");
 
         if (tableName == null || columns == null || values == null || columns.size() != values.size()) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", "error");
-            errorResponse.put("message", "Invalid input");
-            return ResponseEntity.badRequest().body(errorResponse);
+            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "Invalid input"));
         }
 
-        DB.delete(tableName, columns, values);
+        Result result = DB.delete(tableName, columns, values);
         Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", "Delete operation completed successfully");
+        response.put("status", result.getStatus());
+        response.put("message", result.getMessage());
         return ResponseEntity.ok(response);
     }
 
@@ -85,16 +79,17 @@ public class DatabaseController {
         List<Object> params = (List<Object>) payload.get("params");
 
         if (tableName == null || columns == null || whereClause == null || params == null) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", "error");
-            errorResponse.put("message", "Invalid input");
-            return ResponseEntity.badRequest().body(errorResponse);
+            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "Invalid input"));
         }
 
-        String result = DB.select(tableName, columns, whereClause, params);
+        Result result = DB.select(tableName, columns, whereClause, params);
         Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("result", result);
+        response.put("status", result.getStatus());
+        response.put("message", result.getMessage());
+        if (result.getData() != null) {
+            response.put("data", result.getData());
+        }
         return ResponseEntity.ok(response);
     }
+
 }

@@ -20,48 +20,63 @@ public abstract class DBHandler {
         return DriverManager.getConnection(url, username, password);
     }
 
-    public String execQuery(String query) {
-        try (Connection conn = connect()) {
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(query);
-            StringBuilder result = new StringBuilder();
-            ResultSetMetaData metaData = rs.getMetaData();
-            int columnCount = metaData.getColumnCount();
-            while (rs.next()) {
-                for (int i = 1; i <= columnCount; i++) {
-                    String columnName = metaData.getColumnName(i);
-                    Object columnValue = rs.getObject(i);
-                    result.append(columnName).append(": ").append(columnValue).append(", ");
+    public Result execQuery(String query) {
+        try (Connection conn = connect();
+             Statement stmt = conn.createStatement()) {
+
+            // Check if the query is a SELECT
+            if (query.trim().toUpperCase().startsWith("SELECT")) {
+                ResultSet rs = stmt.executeQuery(query);
+                ResultSetMetaData metaData = rs.getMetaData();
+                int columnCount = metaData.getColumnCount();
+                StringBuilder resultData = new StringBuilder();
+
+                // Iterate through the ResultSet to build the output string
+                while (rs.next()) {
+                    for (int i = 1; i <= columnCount; i++) {
+                        String columnName = metaData.getColumnName(i);
+                        Object columnValue = rs.getObject(i);
+                        resultData.append(columnName).append(": ").append(columnValue).append(", ");
+                    }
+                    // Remove the trailing comma and space
+                    if (resultData.length() > 0) {
+                        resultData.setLength(resultData.length() - 2);
+                    }
+                    resultData.append("\n"); // Add a newline after each row
                 }
-                // Remove the trailing comma and space
-                if (result.length() > 0) {
-                    result.setLength(result.length() - 2);
+
+                // Return success result with data if rows are retrieved
+                if (resultData.length() == 0) {
+                    return new Result("success", "Query executed successfully, but no results were found.");
                 }
-                result.append("\n"); // Add a newline after each row
+                return new Result("success", "Query executed successfully", resultData.toString());
+
+            } else {
+                // Handle non-SELECT queries
+                int rowsAffected = stmt.executeUpdate(query);
+                return new Result("success", "Query executed successfully. Rows affected: " + rowsAffected);
             }
-            System.out.println(result.toString());
-            return result.toString();
-        } catch (Exception e) {
-            return e.toString();
+        } catch (SQLException e) {
+            return new Result("error", "SQL Error: " + e.getMessage());
         }
     }
+
 
     /*public int createTable(String sqlStr) {
 
     }*/
 
-    public abstract String listTables();
+    public abstract Result listTables();
 
     abstract String toJavaLikeType(String dataType, int dataLength);
 
     abstract String generateExampleValue(String dataType, int dataLength);
 
-    public abstract void insert(String tableName, List<Object> values);
+    public abstract Result insert(String tableName, List<Object> values);
 
     abstract boolean isValueCompatibleWithType(Object value, String expectedDataType);
 
-    public abstract void delete(String tableName, List<String> columns, List<Object> values);
+    public abstract Result delete(String tableName, List<String> columns, List<Object> values);
 
-    // New abstract select method
-    public abstract void select(String tableName, List<String> columns, String whereClause, List<Object> params);
+    public abstract Result select(String tableName, List<String> columns, String whereClause, List<Object> params);
 }
