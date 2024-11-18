@@ -31,6 +31,15 @@ public class DatabaseController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/createTable")
+    public ResponseEntity<Map<String, Object>> createTable(@RequestBody String sqlStr) {
+        Result result = DB.createTable(sqlStr);
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", result.getStatus());
+        response.put("message", result.getMessage());
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/listTables")
     public ResponseEntity<Map<String, Object>> listTables() {
         Result result = DB.listTables();

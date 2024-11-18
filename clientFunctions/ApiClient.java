@@ -1,5 +1,4 @@
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.json.JSONObject;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -10,19 +9,17 @@ public class ApiClient {
 
     private final String baseUrl;
     private final HttpClient httpClient;
-    private final ObjectMapper objectMapper;
 
     public ApiClient(String baseUrl) {
         this.baseUrl = baseUrl;
         this.httpClient = HttpClient.newHttpClient();
-        this.objectMapper = new ObjectMapper();
     }
 
-    private JsonNode sendRequest(HttpRequest request) {
+    private JSONObject sendRequest(HttpRequest request) {
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
-                return objectMapper.readTree(response.body());
+                return new JSONObject(response.body());
             } else {
                 System.err.println("HTTP request failed with code: " + response.statusCode());
                 return null;
@@ -33,7 +30,7 @@ public class ApiClient {
         }
     }
 
-    public JsonNode execQuery(String query) {
+    public JSONObject execQuery(String query) {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/api/execQuery"))
                 .header("Content-Type", "application/json")
@@ -42,7 +39,17 @@ public class ApiClient {
         return sendRequest(request);
     }
 
-    public JsonNode listTables() {
+    public boolean createTable(String tableSql) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + "/api/createTable"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(tableSql))
+                .build();
+        JSONObject response = sendRequest(request);
+        return response != null && "success".equals(response.optString("status"));
+    }
+
+    public JSONObject listTables() {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/api/listTables"))
                 .GET()
@@ -57,8 +64,8 @@ public class ApiClient {
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(jsonData))
                 .build();
-        JsonNode response = sendRequest(request);
-        return response != null && "success".equals(response.get("status").asText());
+        JSONObject response = sendRequest(request);
+        return response != null && "success".equals(response.optString("status"));
     }
 
     public boolean delete(String tableName, String columns, String values) {
@@ -68,11 +75,11 @@ public class ApiClient {
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(jsonData))
                 .build();
-        JsonNode response = sendRequest(request);
-        return response != null && "success".equals(response.get("status").asText());
+        JSONObject response = sendRequest(request);
+        return response != null && "success".equals(response.optString("status"));
     }
 
-    public JsonNode select(String tableName, String columns, String whereClause, String params) {
+    public JSONObject select(String tableName, String columns, String whereClause, String params) {
         String jsonData = String.format(
             "{\"tableName\": \"%s\", \"columns\": %s, \"whereClause\": \"%s\", \"params\": %s}",
             tableName, columns, whereClause, params
@@ -84,39 +91,5 @@ public class ApiClient {
                 .build();
         return sendRequest(request);
     }
-
-    public static void main(String[] args) {
-        try {
-            ApiClient apiClient = new ApiClient("http://localhost:8080");
-            
-            // Example usage of execQuery
-            JsonNode queryResult = apiClient.execQuery("SELECT * FROM PEOPLE");
-            if (queryResult != null) {
-                System.out.println("Query Result: " + queryResult.toPrettyString());
-            }
-
-            // Example usage of listTables
-            JsonNode tables = apiClient.listTables();
-            if (tables != null) {
-                System.out.println("Tables: " + tables.toPrettyString());
-            }
-
-            // Example usage of insert
-            boolean insertResult = apiClient.insert("PEOPLE", "[{\"name\":\"John Doe\",\"age\":30}]");
-            System.out.println("Insert Result: " + (insertResult ? "Success" : "Failure"));
-
-            // Example usage of delete
-            boolean deleteResult = apiClient.delete("PEOPLE", "[\"name\"]", "[\"John Doe\"]");
-            System.out.println("Delete Result: " + (deleteResult ? "Success" : "Failure"));
-
-            // Example usage of select
-            JsonNode selectResult = apiClient.select("PEOPLE", "[\"name\", \"age\"]", "age > ?", "[25]");
-            if (selectResult != null) {
-                System.out.println("Select Result: " + selectResult.toPrettyString());
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 }
+

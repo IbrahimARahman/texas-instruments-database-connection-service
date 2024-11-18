@@ -61,10 +61,15 @@ public abstract class DBHandler {
         }
     }
 
-
-    /*public int createTable(String sqlStr) {
-
-    }*/
+    public Result createTable(String sqlStr) {
+        try (Connection conn = connect();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute(sqlStr);
+            return new Result("success", "Table created successfully.");
+        } catch (SQLException e) {
+            return new Result("error", "SQL Error: " + e.getMessage());
+        }
+    }
 
     public abstract Result listTables();
 
