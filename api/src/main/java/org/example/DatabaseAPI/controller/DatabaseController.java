@@ -22,14 +22,28 @@ public class DatabaseController {
     }
 
     @PostMapping("/execQuery")
-    public ResponseEntity<Map<String, Object>> execQuery(@RequestBody String query) {
+    public ResponseEntity<Map<String, Object>> execQuery(@RequestBody Map<String, String> request) {
+        // Extract query string from request body
+        String query = request.get("query");
+
+        if (query == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "Query string is missing or empty"
+            ));
+        }
+
+        // Call execQuery with the extracted query string
         Result result = DB.execQuery(query);
         Map<String, Object> response = new HashMap<>();
         response.put("status", result.getStatus());
         response.put("message", result.getMessage());
-        if (result.getData() != null) response.put("data", result.getData());
+        if (result.getData() != null) {
+            response.put("data", result.getData());
+        }
         return ResponseEntity.ok(response);
     }
+
 
     @PostMapping("/createTable")
     public ResponseEntity<Map<String, Object>> createTable(@RequestBody String sqlStr) {

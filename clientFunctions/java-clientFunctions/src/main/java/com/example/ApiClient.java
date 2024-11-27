@@ -1,4 +1,9 @@
-import org.json.JSONObject;
+package com.example;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -9,17 +14,19 @@ public class ApiClient {
 
     private final String baseUrl;
     private final HttpClient httpClient;
+    private final ObjectMapper objectMapper;
 
     public ApiClient(String baseUrl) {
         this.baseUrl = baseUrl;
         this.httpClient = HttpClient.newHttpClient();
+        this.objectMapper = new ObjectMapper();
     }
 
-    private JSONObject sendRequest(HttpRequest request) {
+    private JsonNode sendRequest(HttpRequest request) {
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
-                return new JSONObject(response.body());
+                return objectMapper.readTree(response.body());
             } else {
                 System.err.println("HTTP request failed with code: " + response.statusCode());
                 return null;
@@ -30,11 +37,12 @@ public class ApiClient {
         }
     }
 
-    public JSONObject execQuery(String query) {
+    public JsonNode execQuery(String query) {
+        String jsonData = String.format("{\"query\": \"%s\"}", query);
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/api/execQuery"))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString("{\"query\": \"" + query + "\"}"))
+                .POST(HttpRequest.BodyPublishers.ofString(jsonData))
                 .build();
         return sendRequest(request);
     }
@@ -45,11 +53,11 @@ public class ApiClient {
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(tableSql))
                 .build();
-        JSONObject response = sendRequest(request);
-        return response != null && "success".equals(response.optString("status"));
+        JsonNode response = sendRequest(request);
+        return response != null && "success".equals(response.path("status").asText());
     }
 
-    public JSONObject listTables() {
+    public JsonNode listTables() {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/api/listTables"))
                 .GET()
@@ -58,15 +66,29 @@ public class ApiClient {
     }
 
     public boolean insert(String tableName, String values) {
-        String jsonData = String.format("{\"tableName\": \"%s\", \"values\": %s}", tableName, values);
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl + "/api/insert"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(jsonData))
-                .build();
-        JSONObject response = sendRequest(request);
-        return response != null && "success".equals(response.optString("status"));
+        try {
+            // Validate that the input "values" is a JSON object
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.readTree(values); // Ensures it's valid JSON
+
+            // Create the JSON payload for the HTTP request
+            String jsonData = String.format("{\"tableName\": \"%s\", \"values\": %s}", tableName, values);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + "/api/insert"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonData))
+                    .build();
+
+            // Send the request and process the response
+            JsonNode response = sendRequest(request);
+            return response != null && "success".equals(response.path("status").asText());
+        } catch (Exception e) {
+            System.err.println("Error during insert: " + e.getMessage());
+            return false;
+        }
     }
+
 
     public boolean delete(String tableName, String columns, String values) {
         String jsonData = String.format("{\"tableName\": \"%s\", \"columns\": %s, \"values\": %s}", tableName, columns, values);
@@ -75,11 +97,11 @@ public class ApiClient {
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(jsonData))
                 .build();
-        JSONObject response = sendRequest(request);
-        return response != null && "success".equals(response.optString("status"));
+        JsonNode response = sendRequest(request);
+        return response != null && "success".equals(response.path("status").asText());
     }
 
-    public JSONObject select(String tableName, String columns, String whereClause, String params) {
+    public JsonNode select(String tableName, String columns, String whereClause, String params) {
         String jsonData = String.format(
             "{\"tableName\": \"%s\", \"columns\": %s, \"whereClause\": \"%s\", \"params\": %s}",
             tableName, columns, whereClause, params
@@ -92,4 +114,3 @@ public class ApiClient {
         return sendRequest(request);
     }
 }
-

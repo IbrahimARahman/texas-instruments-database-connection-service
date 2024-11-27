@@ -4,6 +4,12 @@ import org.springframework.stereotype.Component;
 
 import java.sql.*;
 import java.util.List;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public abstract class DBHandler {
     private final String url;
@@ -29,27 +35,26 @@ public abstract class DBHandler {
                 ResultSet rs = stmt.executeQuery(query);
                 ResultSetMetaData metaData = rs.getMetaData();
                 int columnCount = metaData.getColumnCount();
-                StringBuilder resultData = new StringBuilder();
 
-                // Iterate through the ResultSet to build the output string
+                // Collect query results as a list of maps
+                List<Map<String, Object>> rows = new ArrayList<>();
                 while (rs.next()) {
+                    Map<String, Object> row = new HashMap<>();
                     for (int i = 1; i <= columnCount; i++) {
-                        String columnName = metaData.getColumnName(i);
-                        Object columnValue = rs.getObject(i);
-                        resultData.append(columnName).append(": ").append(columnValue).append(", ");
+                        row.put(metaData.getColumnName(i), rs.getObject(i));
                     }
-                    // Remove the trailing comma and space
-                    if (resultData.length() > 0) {
-                        resultData.setLength(resultData.length() - 2);
-                    }
-                    resultData.append("\n"); // Add a newline after each row
+                    rows.add(row);
                 }
 
-                // Return success result with data if rows are retrieved
-                if (resultData.length() == 0) {
+                // Convert results to JSON
+                ObjectMapper objectMapper = new ObjectMapper();
+                String jsonResult = objectMapper.writeValueAsString(rows);
+
+                // Return success with JSON result
+                if (rows.isEmpty()) {
                     return new Result("success", "Query executed successfully, but no results were found.");
                 }
-                return new Result("success", "Query executed successfully", resultData.toString());
+                return new Result("success", "Query executed successfully", jsonResult);
 
             } else {
                 // Handle non-SELECT queries
@@ -58,6 +63,8 @@ public abstract class DBHandler {
             }
         } catch (SQLException e) {
             return new Result("error", "SQL Error: " + e.getMessage());
+        } catch (Exception e) {
+            return new Result("error", "An unexpected error occurred: " + e.getMessage());
         }
     }
 
@@ -83,5 +90,60 @@ public abstract class DBHandler {
 
     public abstract Result delete(String tableName, List<String> columns, List<Object> values);
 
-    public abstract Result select(String tableName, List<String> columns, String whereClause, List<Object> params);
+    public Result select(String tableName, List<String> columns, String whereClause, List<Object> params) {
+        StringBuilder query = new StringBuilder("SELECT ");
+
+        // Append column names or "*" if no columns are specified
+        if (columns == null || columns.isEmpty()) {
+            query.append("*");
+        } else {
+            query.append(String.join(", ", columns));
+        }
+        query.append(" FROM ").append(tableName);
+
+        // Append WHERE clause if provided
+        if (whereClause != null && !whereClause.isEmpty()) {
+            query.append(" WHERE ").append(whereClause);
+        }
+
+        try (Connection conn = connect();
+             PreparedStatement stmt = conn.prepareStatement(query.toString())) {
+
+            // Set the parameters for the WHERE clause
+            if (params != null) {
+                for (int i = 0; i < params.size(); i++) {
+                    stmt.setObject(i + 1, params.get(i));
+                }
+            }
+
+            ResultSet rs = stmt.executeQuery();
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+
+            // Collect query results as a list of maps
+            List<Map<String, Object>> rows = new ArrayList<>();
+            while (rs.next()) {
+                Map<String, Object> row = new HashMap<>();
+                for (int i = 1; i <= columnCount; i++) {
+                    row.put(metaData.getColumnName(i), rs.getObject(i));
+                }
+                rows.add(row);
+            }
+
+            // Convert results to JSON
+            ObjectMapper objectMapper = new ObjectMapper();
+            String jsonResult = objectMapper.writeValueAsString(rows);
+
+            // Return success with JSON result
+            if (rows.isEmpty()) {
+                return new Result("success", "Query executed successfully, but no results were found.");
+            }
+            return new Result("success", "Query executed successfully", jsonResult);
+
+        } catch (SQLException e) {
+            return new Result("error", "SQL Error: " + e.getMessage());
+        } catch (Exception e) {
+            return new Result("error", "An unexpected error occurred: " + e.getMessage());
+        }
+    }
 }
