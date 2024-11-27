@@ -14,7 +14,7 @@ public:
     bool createTable(const std::string& tableSql);
     nlohmann::json listTables();
     bool insert(const std::string& tableName, const std::string& values);
-    bool deleteEntry(const std::string& tableName, const std::string& columns, const std::string& values);
+    bool deleteData(const std::string& tableName, const std::string& columns, const std::string& values);
     nlohmann::json select(const std::string& tableName, const std::string& columns, const std::string& whereClause, const std::string& params);
 
 private:

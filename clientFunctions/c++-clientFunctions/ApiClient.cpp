@@ -79,7 +79,7 @@ bool ApiClient::insert(const std::string& tableName, const std::string& values) 
     }
 }
 
-bool ApiClient::deleteEntry(const std::string& tableName, const std::string& columns, const std::string& values) {
+bool ApiClient::deleteData(const std::string& tableName, const std::string& columns, const std::string& values) {
     std::string jsonData = "{\"tableName\": \"" + tableName + "\", \"columns\": " + columns + ", \"values\": " + values + "}";
     std::string response = sendRequest(baseUrl + "/api/delete", "POST", jsonData);
     if (response.empty()) return false;

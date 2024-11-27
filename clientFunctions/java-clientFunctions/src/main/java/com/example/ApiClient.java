@@ -90,7 +90,7 @@ public class ApiClient {
     }
 
 
-    public boolean delete(String tableName, String columns, String values) {
+    public boolean deleteData(String tableName, String columns, String values) {
         String jsonData = String.format("{\"tableName\": \"%s\", \"columns\": %s, \"values\": %s}", tableName, columns, values);
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/api/delete"))

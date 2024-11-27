@@ -25,7 +25,7 @@ int main() {
         // std::cout << "Insert Result: " << (insertResult ? "Success" : "Failure") << std::endl;
 
         // Example usage of delete
-        bool deleteResult = apiClient.deleteEntry("PEOPLE", "[\"FirstName\"]", "[\"John\"]");
+        bool deleteResult = apiClient.deleteData("PEOPLE", "[\"FirstName\"]", "[\"John\"]");
         std::cout << "Delete Result: " << (deleteResult ? "Success" : "Failure") << std::endl;
 
         // Example usage of select

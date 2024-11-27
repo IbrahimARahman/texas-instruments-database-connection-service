@@ -2,127 +2,145 @@ package org.example.DatabaseAPI.controller;
 
 import org.example.OracleDBHandler;
 import org.example.Result;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
+import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@WebMvcTest(DatabaseController.class)
 class DatabaseControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    private OracleDBHandler dbHandlerStub;
+    private DatabaseController databaseController;
 
-    @Autowired
-    private OracleDBHandler oracleDBHandler;
+    @BeforeEach
+    void setUp() {
+        // Initialize a custom OracleDBHandler stub
+        dbHandlerStub = new OracleDBHandlerStub();
+        databaseController = new DatabaseController(dbHandlerStub);
+    }
 
-    @TestConfiguration
-    static class TestConfig {
-        @Bean
-        public OracleDBHandler oracleDBHandler() {
-            // Provide a mock implementation or supply required constructor arguments
-            return Mockito.spy(new OracleDBHandler("jdbc:test-url", "test-user", "test-pass"));
+    // Test for successful execution of a valid SQL query
+    @Test
+    void testExecQuery_Success() {
+        ResponseEntity<Map<String, Object>> response = databaseController.execQuery(Map.of("query", "SELECT * FROM test"));
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("success", response.getBody().get("status"));
+        assertEquals("Query executed successfully", response.getBody().get("message"));
+        assertEquals("[{\"id\":1,\"name\":\"Test\"}]", response.getBody().get("data"));
+    }
+
+    // Test for handling a missing or empty query string
+    @Test
+    void testExecQuery_MissingQuery() {
+        ResponseEntity<Map<String, Object>> response = databaseController.execQuery(Map.of());
+        assertEquals(400, response.getStatusCodeValue());
+        assertEquals("error", response.getBody().get("status"));
+        assertEquals("Query string is missing or empty", response.getBody().get("message"));
+    }
+
+    // Test for successfully creating a table
+    @Test
+    void testCreateTable_Success() {
+        ResponseEntity<Map<String, Object>> response = databaseController.createTable("CREATE TABLE test (id INT, name VARCHAR(50))");
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("success", response.getBody().get("status"));
+        assertEquals("Table created successfully", response.getBody().get("message"));
+    }
+
+    // Test for retrieving a list of tables
+    @Test
+    void testListTables_Success() {
+        ResponseEntity<Map<String, Object>> response = databaseController.listTables();
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("success", response.getBody().get("status"));
+        assertEquals("Tables listed successfully", response.getBody().get("message"));
+        assertEquals("[\"test_table\"]", response.getBody().get("data"));
+    }
+
+    // Test for successful data insertion into a table
+    @Test
+    void testInsert_Success() {
+        ResponseEntity<Map<String, Object>> response = databaseController.insert(Map.of(
+                "tableName", "test_table",
+                "values", List.of(1, "Test")
+        ));
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("success", response.getBody().get("status"));
+        assertEquals("Data inserted successfully", response.getBody().get("message"));
+    }
+
+    // Test for retrieving data from a table
+    @Test
+    void testDelete_Success() {
+        ResponseEntity<Map<String, Object>> response = databaseController.delete(Map.of(
+                "tableName", "test_table",
+                "columns", List.of("id"),
+                "values", List.of(1)
+        ));
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("success", response.getBody().get("status"));
+        assertEquals("Rows deleted successfully", response.getBody().get("message"));
+    }
+
+    @Test
+    void testSelect_Success() {
+        ResponseEntity<Map<String, Object>> response = databaseController.select(Map.of(
+                "tableName", "test_table",
+                "columns", List.of("id", "name"),
+                "whereClause", "id = ?",
+                "params", List.of(1)
+        ));
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals("success", response.getBody().get("status"));
+        assertEquals("Data retrieved successfully", response.getBody().get("message"));
+        assertEquals("[{\"id\":1,\"name\":\"Test\"}]", response.getBody().get("data"));
+    }
+
+    // Custom Stub Class for OracleDBHandler
+    private static class OracleDBHandlerStub extends OracleDBHandler {
+
+        public OracleDBHandlerStub() {
+            super("jdbc:h2:mem:testdb", "sa", "");
         }
-    }
 
-    @Test
-    void testExecQuery() throws Exception {
-        // Mock behavior for execQuery
-        Mockito.doReturn(new Result("success", "Query executed successfully", "data"))
-                .when(oracleDBHandler).execQuery(any(String.class));
+        @Override
+        public Result execQuery(String query) {
+            if (query.contains("SELECT")) {
+                return new Result("success", "Query executed successfully", "[{\"id\":1,\"name\":\"Test\"}]");
+            }
+            return new Result("error", "Invalid query");
+        }
 
-        // Perform POST request
-        mockMvc.perform(post("/api/execQuery")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("\"SELECT * FROM PEOPLE\""))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("success"))
-                .andExpect(jsonPath("$.message").value("Query executed successfully"))
-                .andExpect(jsonPath("$.data").value("data"));
-    }
+        @Override
+        public Result createTable(String sql) {
+            if (sql.contains("CREATE TABLE")) {
+                return new Result("success", "Table created successfully");
+            }
+            return new Result("error", "Invalid SQL");
+        }
 
-    @Test
-    void testCreateTable() throws Exception {
-        // Mock behavior for createTable
-        Mockito.doReturn(new Result("success", "Table created successfully"))
-                .when(oracleDBHandler).createTable(any(String.class));
+        @Override
+        public Result listTables() {
+            return new Result("success", "Tables listed successfully", "[\"test_table\"]");
+        }
 
-        // Perform POST request
-        mockMvc.perform(post("/api/createTable")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("\"CREATE TABLE TEST (id INT)\""))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("success"))
-                .andExpect(jsonPath("$.message").value("Table created successfully"));
-    }
+        @Override
+        public Result insert(String tableName, List<Object> values) {
+            return new Result("success", "Data inserted successfully");
+        }
 
-    @Test
-    void testListTables() throws Exception {
-        // Mock behavior for listTables
-        Mockito.doReturn(new Result("success", "Tables retrieved successfully", "table1, table2"))
-                .when(oracleDBHandler).listTables();
+        @Override
+        public Result delete(String tableName, List<String> columns, List<Object> values) {
+            return new Result("success", "Rows deleted successfully");
+        }
 
-        // Perform GET request
-        mockMvc.perform(get("/api/listTables"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("success"))
-                .andExpect(jsonPath("$.message").value("Tables retrieved successfully"))
-                .andExpect(jsonPath("$.data").value("table1, table2"));
-    }
-
-    @Test
-    void testInsert() throws Exception {
-        // Mock behavior for insert
-        Mockito.doReturn(new Result("success", "Insert successful"))
-                .when(oracleDBHandler).insert(any(String.class), any(List.class));
-
-        // Perform POST request
-        mockMvc.perform(post("/api/insert")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"tableName\": \"PEOPLE\", \"values\": [{\"name\": \"John Doe\", \"age\": 30}]}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("success"))
-                .andExpect(jsonPath("$.message").value("Insert successful"));
-    }
-
-    @Test
-    void testDelete() throws Exception {
-        // Mock behavior for delete
-        Mockito.doReturn(new Result("success", "Delete successful"))
-                .when(oracleDBHandler).delete(any(String.class), any(List.class), any(List.class));
-
-        // Perform POST request
-        mockMvc.perform(post("/api/delete")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"tableName\": \"PEOPLE\", \"columns\": [\"name\"], \"values\": [\"John Doe\"]}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("success"))
-                .andExpect(jsonPath("$.message").value("Delete successful"));
-    }
-
-    @Test
-    void testSelect() throws Exception {
-        // Mock behavior for select
-        Mockito.doReturn(new Result("success", "Select successful", "selected data"))
-                .when(oracleDBHandler).select(any(String.class), any(List.class), any(String.class), any(List.class));
-
-        // Perform POST request
-        mockMvc.perform(post("/api/select")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"tableName\": \"PEOPLE\", \"columns\": [\"name\", \"age\"], \"whereClause\": \"age > ?\", \"params\": [25]}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("success"))
-                .andExpect(jsonPath("$.message").value("Select successful"))
-                .andExpect(jsonPath("$.data").value("selected data"));
+        @Override
+        public Result select(String tableName, List<String> columns, String whereClause, List<Object> params) {
+            return new Result("success", "Data retrieved successfully", "[{\"id\":1,\"name\":\"Test\"}]");
+        }
     }
 }
