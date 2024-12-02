@@ -54,6 +54,7 @@ public class ApiClient {
                 .POST(HttpRequest.BodyPublishers.ofString(tableSql))
                 .build();
         JsonNode response = sendRequest(request);
+        System.out.println(response);
         return response != null && "success".equals(response.path("status").asText());
     }
 
