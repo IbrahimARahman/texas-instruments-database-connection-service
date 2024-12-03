@@ -35,7 +35,7 @@ public class Demo {
             }*/
 
             // Example usage of delete
-            boolean deleteResult = apiClient.deleteData("PEOPLE", "[\"firstName\"]", "[\"John\"]");
+            boolean deleteResult = apiClient.deleteData("PEOPLE", "[\"firstName\"]", "[\"Jane\"]");
             System.out.println("Delete Result: " + (deleteResult ? "Success" : "Failure"));
             // Example usage of select
             /*JsonNode selectResult = apiClient.select("PEOPLE", "[\"firstname\", \"street\"]", "lastname = ?", "[\"Doe\"]");
